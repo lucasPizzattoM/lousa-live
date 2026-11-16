@@ -1,0 +1,16 @@
+# Para testar no seu computador, sem Traefik e sem domínio:
+#   docker compose -f docker-compose.local.yml up --build
+# e abra http://localhost:8080
+services:
+  app:
+    build: ./app
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - SENHA_PROFESSOR=${SENHA_PROFESSOR:-}
+    volumes:
+      - dados:/dados
+
+volumes:
+  dados:

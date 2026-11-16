@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lousa ao vivo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&display=swap">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<header class="topo-app">
+  <span class="marca">Lousa ao vivo</span>
+  <span class="titulo-doc" id="tituloDoc">Nenhum documento aberto</span>
+  <span class="chip-vivo" id="chipVivo" hidden><span class="ponto-vivo" aria-hidden="true"></span><span id="chipVivoTxt">Ao vivo</span></span>
+</header>
+
+<main class="mesa">
+  <section class="vazio" id="vazio" aria-labelledby="vazioTitulo">
+    <h1 id="vazioTitulo">Escolha um documento</h1>
+    <p id="vazioTexto">Abra uma aula da biblioteca para estudar, desenhar por cima ou dar aula ao vivo.</p>
+    <ul class="docs" id="vazioLista" aria-label="Documentos da biblioteca"></ul>
+    <p class="muted" id="vazioDica" hidden>A biblioteca está vazia. Em Documentos, entre com a senha de professor para importar um arquivo HTML.</p>
+    <button type="button" class="link" id="vazioCriar">Criar uma aula nova com o Claude</button>
+  </section>
+
+  <div class="palco" id="palco" hidden>
+    <iframe id="folha" title="Documento da aula" scrolling="no"
+      sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals"
+      referrerpolicy="same-origin"></iframe>
+    <div class="carregando" id="carregando" role="status">Carregando documento…</div>
+  </div>
+</main>
+
+<canvas id="quadro" aria-hidden="true"></canvas>
+<div id="cursores" aria-hidden="true"></div>
+
+<div class="barra">
+  <p id="aviso" class="aviso" role="status" hidden></p>
+  <button type="button" id="btnSeguir" class="primario" hidden>Seguir o professor</button>
+
+  <!-- Biblioteca -->
+  <div class="painel" id="painelDocs" role="dialog" aria-labelledby="docsTitulo" hidden>
+    <div class="topo-painel">
+      <h2 id="docsTitulo">Documentos</h2>
+      <button type="button" class="ico" data-fechar aria-label="Fechar"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <p class="nota" id="docsNotaAluno" hidden>Durante a aula, quem escolhe o documento é o professor.</p>
+    <button type="button" class="criar-atalho" id="docsCriar">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 4.6L18.5 9l-4.6 1.9L12 15.5l-1.9-4.6L5.5 9l4.6-1.4z"/><path d="M19 15l.8 1.9 1.9.8-1.9.8L19 20.4l-.8-1.9-1.9-.8 1.9-.8z"/></svg>
+      <span><strong>Criar aula com o Claude</strong><span>Prompt pronto para copiar e o modelo de aula</span></span>
+    </button>
+    <ul class="docs" id="docsLista" aria-label="Documentos da biblioteca"></ul>
+    <p class="muted" id="docsVazio" hidden>Nenhum documento na biblioteca ainda.</p>
+    <p class="erro" id="docsErro" hidden></p>
+
+    <form class="grupo cartao" id="formImport" hidden novalidate>
+      <h3>Importar documento</h3>
+      <p class="muted" id="importArquivo"></p>
+      <div class="campo">
+        <label for="importTitulo">Título</label>
+        <input id="importTitulo" type="text" maxlength="120" autocomplete="off" required>
+      </div>
+      <div class="campo">
+        <label for="importLargura">Pensado para</label>
+        <select id="importLargura">
+          <option value="430">Celular (430 px)</option>
+          <option value="768">Tablet (768 px)</option>
+          <option value="1100">Computador (1100 px)</option>
+        </select>
+      </div>
+      <p class="erro" id="importErro" hidden></p>
+      <div class="linha">
+        <button type="submit" class="primario" id="importEnviar">Importar</button>
+        <button type="button" id="importCancelar">Cancelar</button>
+      </div>
+    </form>
+
+    <form class="grupo cartao" id="formEditar" hidden novalidate>
+      <h3>Editar documento</h3>
+      <div class="campo">
+        <label for="editarTitulo">Título</label>
+        <input id="editarTitulo" type="text" maxlength="120" autocomplete="off" required>
+      </div>
+      <div class="campo">
+        <label for="editarLargura">Pensado para</label>
+        <select id="editarLargura">
+          <option value="430">Celular (430 px)</option>
+          <option value="768">Tablet (768 px)</option>
+          <option value="1100">Computador (1100 px)</option>
+        </select>
+      </div>
+      <p class="erro" id="editarErro" hidden></p>
+      <div class="linha">
+        <button type="submit" class="primario">Salvar</button>
+        <button type="button" id="editarCancelar">Cancelar</button>
+      </div>
+    </form>
+
+    <div class="grupo rodape-docs" id="docsAdmin">
+      <button type="button" class="link" id="btnMostrarLogin">Importar ou apagar documentos</button>
+      <form class="grupo" id="formLogin" hidden novalidate>
+        <div class="campo">
+          <label for="loginSenha">Senha de professor</label>
+          <div class="linha">
+            <input id="loginSenha" type="password" autocomplete="current-password">
+            <button type="submit" class="primario">Entrar</button>
+          </div>
+        </div>
+        <p class="erro" id="loginErro" hidden></p>
+      </form>
+      <div class="grupo" id="painelAdmin" hidden>
+        <label class="soltar" id="soltar" for="importInput">
+          <strong>Importar arquivo HTML</strong>
+          <span>Toque para escolher ou arraste o arquivo para cá. Até 20 MB.</span>
+        </label>
+        <input id="importInput" type="file" accept=".html,.htm,text/html" class="invisivel">
+        <button type="button" class="link" id="btnSairAdmin">Sair do modo professor</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Criar aula com o Claude -->
+  <div class="painel" id="painelCriar" role="dialog" aria-labelledby="criarTitulo" hidden>
+    <div class="topo-painel">
+      <h2 id="criarTitulo">Criar aula com o Claude</h2>
+      <button type="button" class="ico" data-fechar aria-label="Fechar"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+    <ol class="etapas">
+      <li>Preencha o que souber. O que ficar vazio vai entre colchetes, para trocar depois.</li>
+      <li>Copie o prompt e cole numa conversa com o Claude.</li>
+      <li>Salve o arquivo .html que ele criar e importe em Documentos.</li>
+    </ol>
+    <div class="campo">
+      <label for="criarMateria">Matéria</label>
+      <input id="criarMateria" type="text" maxlength="80" autocomplete="off" placeholder="Biologia">
+    </div>
+    <div class="campo">
+      <label for="criarTema">Tema</label>
+      <input id="criarTema" type="text" maxlength="160" autocomplete="off" placeholder="Fotossíntese">
+    </div>
+    <div class="campo">
+      <label for="criarPublico">Para quem</label>
+      <input id="criarPublico" type="text" maxlength="80" autocomplete="off" placeholder="9º ano do fundamental">
+    </div>
+    <div class="campo">
+      <label for="criarModelo">Modelo de aula</label>
+      <select id="criarModelo">
+        <option>Aula completa</option>
+        <option>Revisão para prova</option>
+        <option>Lista de exercícios</option>
+        <option>Laboratório interativo</option>
+        <option>Linha do tempo</option>
+        <option>Comparação de conceitos</option>
+        <option>Estudo de caso</option>
+        <option>Leitura guiada</option>
+        <option>Vocabulário e idioma</option>
+        <option>Quiz</option>
+        <option value="outro">Outro…</option>
+      </select>
+    </div>
+    <div class="campo" id="criarOutroCampo" hidden>
+      <label for="criarOutro">Qual modelo?</label>
+      <input id="criarOutro" type="text" maxlength="120" autocomplete="off" placeholder="Debate com argumentos dos dois lados">
+    </div>
+    <div class="campo">
+      <label for="criarObs">Observações (opcional)</label>
+      <textarea id="criarObs" rows="2" maxlength="600" placeholder="Usar exemplos de futebol. Aula de 30 minutos."></textarea>
+    </div>
+    <label class="marcar" for="criarComModelo">
+      <input id="criarComModelo" type="checkbox" checked>
+      <span>Incluir o código do modelo no prompt. Recomendado: deixa todas as aulas com o mesmo visual.</span>
+    </label>
+    <div class="campo">
+      <label for="criarPrompt">Prompt</label>
+      <textarea id="criarPrompt" rows="7" readonly></textarea>
+      <p class="muted pequeno" id="criarTamanho"></p>
+    </div>
+    <p class="erro" id="criarErro" hidden></p>
+    <div class="linha quebra">
+      <button type="button" class="primario" id="criarCopiar">Copiar prompt</button>
+      <button type="button" id="criarVerModelo">Ver o modelo</button>
+      <a class="botao" href="/modelo.html" download="modelo-de-aula.html">Baixar o modelo</a>
+    </div>
+  </div>
+
+  <!-- Aula ao vivo -->
+  <div class="painel" id="painelVivo" role="dialog" aria-labelledby="vivoTitulo" hidden>
+    <div class="topo-painel">
+      <h2 id="vivoTitulo">Aula ao vivo</h2>
+      <button type="button" class="ico" data-fechar aria-label="Fechar"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg></button>
+    </div>
+
+    <div id="vivoSemSite" class="grupo" hidden>
+      <p>A aula ao vivo funciona quando a página é aberta pelo endereço do site, como <strong>https://aula.seudominio.com</strong>.</p>
+    </div>
+
+    <div id="vivoEntrar" class="grupo">
+      <p>Desenhem juntos, cada um no seu aparelho. Quem cria a aula é o professor: escolhe o documento e guia a rolagem.</p>
+      <div class="campo">
+        <label for="vivoNome">Seu nome</label>
+        <input id="vivoNome" type="text" maxlength="20" autocomplete="off" placeholder="Seu nome">
+      </div>
+      <button type="button" class="primario" id="vivoCriar">Criar aula</button>
+      <p class="ou">ou entre numa aula</p>
+      <div class="campo">
+        <label for="vivoCodigo">Código da aula</label>
+        <div class="linha">
+          <input id="vivoCodigo" type="text" maxlength="5" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="K7Q2M">
+          <button type="button" id="vivoEntrarBtn">Entrar</button>
+        </div>
+      </div>
+      <p class="erro" id="vivoErro" hidden></p>
+    </div>
+
+    <div id="vivoSala" class="grupo" hidden>
+      <p class="status" id="vivoStatus">Conectando…</p>
+      <div>
+        <p class="muted pequeno">Código da aula</p>
+        <p class="codigo" id="vivoCodigoAtual">-----</p>
+      </div>
+      <div class="campo">
+        <label for="vivoLink">Link para a outra pessoa entrar</label>
+        <div class="linha">
+          <input id="vivoLink" type="text" readonly>
+          <button type="button" id="vivoCopiar">Copiar</button>
+        </div>
+      </div>
+      <div class="campo">
+        <span class="rot">Na aula agora</span>
+        <div class="pessoas" id="vivoPessoas"></div>
+      </div>
+      <button type="button" id="vivoSair">Sair da aula</button>
+    </div>
+  </div>
+
+  <div class="pilula" role="toolbar" aria-label="Ferramentas">
+    <div class="kit" id="kit" hidden>
+      <button type="button" class="cor" data-tool="caneta" data-color="--blue" aria-label="Caneta azul" aria-pressed="true"><span style="background:var(--blue)"></span></button>
+      <button type="button" class="cor" data-tool="caneta" data-color="--green" aria-label="Caneta verde" aria-pressed="false"><span style="background:var(--green)"></span></button>
+      <button type="button" class="cor" data-tool="caneta" data-color="--red" aria-label="Caneta vermelha" aria-pressed="false"><span style="background:var(--red)"></span></button>
+      <button type="button" class="cor" data-tool="caneta" data-color="--ink" aria-label="Caneta preta" aria-pressed="false"><span style="background:var(--ink)"></span></button>
+      <button type="button" class="cor" data-tool="marca" aria-label="Marca-texto" aria-pressed="false"><span class="marca-texto"></span></button>
+      <button type="button" class="ico" data-tool="borracha" aria-label="Borracha" aria-pressed="false"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 20H8.5l-4.21-4.3a1 1 0 0 1 0-1.41l10-10a1 1 0 0 1 1.41 0l5 5a1 1 0 0 1 0 1.41L11.5 20"/><path d="M18 13.3L11.7 7"/></svg></button>
+      <span class="sep" aria-hidden="true"></span>
+      <button type="button" class="ico" id="desfazer" aria-label="Desfazer"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14l-4-4 4-4"/><path d="M5 10h11a4 4 0 1 1 0 8h-1"/></svg></button>
+      <button type="button" class="ico" id="limpar" aria-label="Apagar todos os desenhos"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12"/><path d="M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"/></svg></button>
+    </div>
+    <button type="button" class="principal" id="toggleDesenho" aria-pressed="false">
+      <svg id="icLapis" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4l10.5-10.5a2.828 2.828 0 1 0-4-4L4 16v4"/><path d="M13.5 6.5l4 4"/></svg>
+      <svg id="icOk" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden><path d="M5 12l5 5L20 7"/></svg>
+      <span id="toggleTxt">Desenhar</span>
+    </button>
+    <button type="button" class="com-icone" id="btnDocs" aria-expanded="false" aria-controls="painelDocs" aria-label="Documentos">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/><path d="M9 13h6"/><path d="M9 17h4"/></svg>
+      <span class="rotulo-largo">Documentos</span>
+    </button>
+    <button type="button" class="com-icone" id="btnVivo" aria-expanded="false" aria-controls="painelVivo">
+      <span class="ponto-vivo" aria-hidden="true"></span>
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.85"/></svg>
+      <span>Ao vivo</span>
+    </button>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
